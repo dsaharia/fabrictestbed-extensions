@@ -3363,6 +3363,7 @@ class Node:
         vcpu_cpu_map: List[Dict[str, str]] = None,
         node_set: List[str] = None,
         keys: List[Dict[str, str]] = None,
+        bdf: List[str] = None,
     ) -> Union[Dict, str]:
         """
         Perform operation action on a VM; an action which is triggered by CF via the Aggregate
@@ -3371,6 +3372,7 @@ class Node:
         :param vcpu_cpu_map: map virtual cpu to host cpu map
         :param node_set: list of numa nodes
         :param keys: list of ssh keys
+        :param bdf: list of PCI Ids
 
         :raise Exception: in case of failure
 
@@ -3388,6 +3390,7 @@ class Node:
                 vcpu_cpu_map=vcpu_cpu_map,
                 node_set=node_set,
                 keys=keys,
+                bdf=bdf
             )
         )
         logger = logging.getLogger()
