@@ -622,6 +622,7 @@ V1Switch(
         with_RA=False,
         RA_port=None,
         RA_et=None,
+        with_provP4=False,  # Flag for provP4
         with_SPADE=False,
         SPADE_file=None,
         SPADE_switch_id=None,
@@ -864,6 +865,13 @@ V1Switch(
             return False
         else:
             return True
+
+    def send_to_provP4(self, cmd):
+        """
+        Placeholder for sending command to provP4 system.
+        """
+        # TODO: Implement actual logic to send cmd to provP4 node (SPADE via RabbitMQ)
+        print(f"[provP4] Command sent: {cmd}")
 
     def get_switch_features(self):
         """
