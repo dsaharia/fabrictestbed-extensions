@@ -600,6 +600,7 @@ V1Switch(
         with_RA=False,
         RA_port=None,
         RA_et=None,
+        with_provP4=False,  # Flag for provP4
     ):
         """
         Start the switch executing, and have it run a P4 program.
@@ -619,6 +620,7 @@ V1Switch(
 
         RA_inclusion = ""
         cfg_update.append(self.prep_switch_config_update("with_RA", False))
+        cfg_update.append(self.prep_switch_config_update("with_provP4", with_provP4))
 
         if with_RA:
             RA_inclusion = "--enable-ra"
@@ -637,7 +639,6 @@ V1Switch(
             RA_inclusion += " --ra-etype " + str(RA_et)
         else:
             cfg_update.append(self.prep_switch_config_update("RA_et", None))
-
         commands = [
             "[ ! -d ~/bmv2-remote-attestation ] && cd ~ && sudo ln -s /usr/local/bmv2-remote-attestation",
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
@@ -742,7 +743,7 @@ V1Switch(
         else:
             return False
 
-    def run_command(self, cmd, dry=False, quiet=False):
+    def run_command(self, cmd, dry=False, quiet=False, to_provP4=False):
         """
         Run a CLI command on the switch.
         """
@@ -765,11 +766,20 @@ V1Switch(
                     return False
 
         stderr = list(filter(lambda line: line != "", stderr))
-
+        if to_provP4:
+            self.send_to_provP4(cmd)
+            
         if stderr and len(stderr) == 0:
             return True
         else:
             return False
+
+    def send_to_provP4(self, cmd):
+        """
+        Placeholder for sending command to provP4 system.
+        """
+        # TODO: Implement actual logic to send cmd to provP4 node (SPADE via RabbitMQ)
+        print(f"[provP4] Command sent: {cmd}")
 
     def get_switch_features(self):
         """
@@ -778,6 +788,7 @@ V1Switch(
         result = {"Running": self.get_switch_config("Running")}
         if self.get_switch_config("Running"):
             result["with_RA"] = self.get_switch_config("with_RA")
+            result["with_provP4"] = self.get_switch_config("with_provP4")  # New flag
             if self.get_switch_config("with_RA"):
                 if self.get_switch_config("RA_port") is not None:
                     result["RA_port"] = self.get_switch_config("RA_port")
