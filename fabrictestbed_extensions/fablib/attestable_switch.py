@@ -312,6 +312,7 @@ class Attestable_Switch(Node):
         ports: List[str] = None,
         from_raw_image=False,
         setup_and_configure=True,
+        with_provP4: bool = False,
     ):
         """
         Not intended for API call.  See: Slice.add_attestable_switch()
@@ -350,7 +351,10 @@ class Attestable_Switch(Node):
         """
         if site is None:
             [site] = slice.get_fablib_manager().get_random_sites(avoid=avoid)
-
+        # If with_provP4 is True, add the p_spade port to the ports list
+        if with_provP4:
+            spade_port = "p_spade"
+            ports.append(spade_port)
         name = Attestable_Switch.name(name)
 
         logging.info(
@@ -375,6 +379,15 @@ class Attestable_Switch(Node):
         )
 
         node.init_fablib_data()
+
+        if with_provP4:
+            try:
+                from fabrictestbed_extensions.fablib.provp4 import SpadeNode
+                spade_node = SpadeNode.add_spade_node(slice=slice, switch_node=node, site=site)
+                # spade_node.configure_interfaces()
+                # spade_node.configure_rabbitmq()
+            except Exception as e:
+                logging.error(f"Failed to add ProvP4 SpadeNode: {e}")
 
         return node
 
