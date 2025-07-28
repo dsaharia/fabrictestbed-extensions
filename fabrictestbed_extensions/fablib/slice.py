@@ -1320,6 +1320,7 @@ class Slice:
         raise_exception: bool = False,
         from_raw_image: bool = False,
         setup_and_configure: bool = True,
+        with_provP4: bool = False,
     ) -> Attestable_Switch:
         """
         Creates a new attestable switch on this fablib slice.
@@ -1343,6 +1344,7 @@ class Slice:
             ports=ports,
             from_raw_image=from_raw_image,
             setup_and_configure=setup_and_configure,
+            with_provP4=with_provP4,
         )
 
         aswitch.init_fablib_data()
