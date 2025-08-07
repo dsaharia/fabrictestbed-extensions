@@ -1195,6 +1195,7 @@ class Interface:
 
         :return: None
         """
+        self.config_vlan_iface()
         network = self.get_network()
         if not network:
             logging.info(
