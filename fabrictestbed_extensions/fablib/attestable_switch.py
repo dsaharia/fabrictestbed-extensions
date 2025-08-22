@@ -390,9 +390,6 @@ class Attestable_Switch(Node):
         node.set_image(
             Attestable_Switch.default_image, username=Attestable_Switch.default_username
         )
-
-        node.init_fablib_data()
-
         if with_provP4:
             try:
                 from fabrictestbed_extensions.fablib.provp4 import SpadeNode
@@ -401,6 +398,8 @@ class Attestable_Switch(Node):
                 # spade_node.configure_rabbitmq()
             except Exception as e:
                 logging.error(f"Failed to add ProvP4 SpadeNode: {e}")
+
+        node.init_fablib_data()
 
         return node
 
