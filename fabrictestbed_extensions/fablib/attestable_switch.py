@@ -75,10 +75,11 @@ class Attestable_Switch(Node):
     default_ram = 8
     default_disk = 50
     default_image = "crease_ubuntu_22"
+    default_image = "crease_ubuntu_22"
     default_username = "ubuntu"
     raw_image = "default_ubuntu_22"
-    crease_path_prefix = "/home/ubuntu/.crease/"
-    cfg_file = crease_path_prefix + "crease_switch_cfg.json"
+    bmv_prefix = "~/bmv2-remote-attestation/targets/simple_switch/"
+    crease_path_prefix = "/home/ubuntu/crease_cfg/"
 
     __version__ = "beta 3"
     __version_short__ = "b3"
