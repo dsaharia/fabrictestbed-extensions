@@ -34,10 +34,10 @@ runtime:
   token_location: /home/fabric/.tokens.json
   bastion_host: bastion.fabric-testbed.net
   bastion_username:
-  bastion_key_location: /home/fabric/work/fabric_config/fabric_bastion_key
+  bastion_key_location: /home/dhiraj/CREASE-PROVP4/fabrictestbed-extensions/env/fabric_config/bastion_taurus
   bastion_key_passphrase:
-  slice_private_key_file: /home/fabric/work/fabric_config/slice_key
-  slice_public_key_file: /home/fabric/work/fabric_config/slice_key.pub
+  slice_private_key_file: /home/dhiraj/CREASE-PROVP4/fabrictestbed-extensions/env/fabric_config/taurus
+  slice_public_key_file: /home/dhiraj/CREASE-PROVP4/fabrictestbed-extensions/env/fabric_config/taurus.pub
   slice_private_key_passphrase:
   log_file: /home/fabric/fablib.log
   log_level: INFO
