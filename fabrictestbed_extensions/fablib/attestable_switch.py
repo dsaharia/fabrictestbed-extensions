@@ -608,7 +608,7 @@ V1Switch(
 
     def start_switch(
         self,
-        program="/home/ubuntu/.crease/nothing.json",
+        program="/home/ubuntu/.crease/crease_cfg/nothing.json",
         dry=False,
         quiet=True,
         force=False,
@@ -703,7 +703,7 @@ V1Switch(
 
         commands = [
             f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
-            f'nohup bash -c "sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}" &',
+            f'sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}',
         ]
 
         stdout = []
@@ -712,12 +712,12 @@ V1Switch(
             for command in commands:
                 print(command)
         else:
-            (out, err) = self.execute(commands[0], quiet=quiet)
+            (out, err) = self.execute(commands[0])
             stdout.append(out)
             stderr.append(err)
-            job = self.execute_thread(commands[1])
-            time.sleep(5)
-            if not job.running() and not quiet:
+            job = self.execute_thread(commands[1], quiet=quiet)
+            time.sleep(2)
+            if not job.running():
                 (out, err) = job.result()
                 stdout.append(out)
                 stderr.append(err)
