@@ -54,6 +54,7 @@ import logging
 import os
 import time
 import json
+import json
 from typing import TYPE_CHECKING, List
 
 from tabulate import tabulate
@@ -78,7 +79,8 @@ class Attestable_Switch(Node):
     default_image = "crease_ubuntu_22"
     default_username = "ubuntu"
     raw_image = "default_ubuntu_22"
-    crease_path_prefix = "/home/ubuntu/.crease/crease_cfg/"
+    crease_path_prefix = "/home/ubuntu/.crease/"
+    cfg_file = crease_path_prefix + "crease_switch_cfg.json"
 
     __version__ = "beta 3"
     __version_short__ = "b3"
@@ -123,6 +125,8 @@ class Attestable_Switch(Node):
         super().__init__(slice, node, validate, raise_exception)
 
         logging.info(f"Creating Attestable Switch {self.get_name()}.")
+
+        self.runtime_cfg = {}
 
         self.runtime_cfg = {}
 
@@ -183,15 +187,8 @@ class Attestable_Switch(Node):
         Get run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=quiet)[0])
-        val = self.runtime_cfg.get(k, None)
-        if val == "False":
-            return False
-        elif val == "True":
-            return True
-        elif val == "None":
-            return None
-        return val
+            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}")[0])
+        return self.runtime_cfg.get(k, None)
 
     def prep_switch_config_update(self, k, v):
         """
@@ -204,11 +201,11 @@ class Attestable_Switch(Node):
         Set run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=True)[0])
+            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}")[0])
         for k, v in cfg_update:
             self.runtime_cfg[k] = v
         s = f"echo '{json.dumps(self.runtime_cfg)}' > {Attestable_Switch.cfg_file}"
-        self.execute(s, quiet=True)
+        self.execute(s)
 
     def get_port_names(self):
         """
@@ -439,6 +436,7 @@ class Attestable_Switch(Node):
 
         if self.get_switch_data()["setup_and_configure"]:
             self.execute(f"touch {Attestable_Switch.cfg_file}")
+            self.execute(f"touch {Attestable_Switch.cfg_file}")
 
             logging.info(
                 f"Attestable Switch {self.get_name()}: starting config. from_raw_image={from_raw_image}"
@@ -608,7 +606,7 @@ V1Switch(
 
     def start_switch(
         self,
-        program="/home/ubuntu/.crease/crease_cfg/nothing.json",
+        program="/home/ubuntu/.crease/nothing.json",
         dry=False,
         quiet=True,
         force=False,
