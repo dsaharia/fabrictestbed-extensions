@@ -731,7 +731,7 @@ V1Switch(
 
         result = None
 
-        if stderr:
+        if stderr and len(stderr) > 0:
             result = False
         else:
             cfg_update.append(self.prep_switch_config_update("Running", True))
