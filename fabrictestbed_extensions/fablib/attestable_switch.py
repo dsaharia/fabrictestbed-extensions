@@ -187,7 +187,7 @@ class Attestable_Switch(Node):
         Get run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}")[0])
+            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=quiet)[0])
         val = self.runtime_cfg.get(k, None)
         if val == "False":
             return False
@@ -208,7 +208,7 @@ class Attestable_Switch(Node):
         Set run-time configurable, switch-specific configuration data.
         """
         if not self.runtime_cfg:
-            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}")[0])
+            self.runtime_cfg = json.loads(self.execute(f"cat {Attestable_Switch.cfg_file}", quiet=True)[0])
         for k, v in cfg_update:
             self.runtime_cfg[k] = v
         s = f"echo '{json.dumps(self.runtime_cfg)}' > {Attestable_Switch.cfg_file}"
