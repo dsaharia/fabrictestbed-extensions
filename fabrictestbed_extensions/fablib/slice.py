@@ -1747,13 +1747,13 @@ class Slice:
             logging.info(e, exc_info=True)
             raise Exception(f"Attestable Switch not found: {name}")
 
-    def get_spade_node(self, name: str = "spade-node"):
+    def get_provp4_node(self, name: str = "spade-node"):
         """
         Get reference to a SPADE node in the fablib slice.
         """
         try:
             from fabrictestbed_extensions.fablib.provp4 import SpadeNode
-            return SpadeNode.get_spade_node(
+            return SpadeNode.get_provp4_node(
                 self, self.get_fim_topology().nodes[name]
             )
         except Exception as e:
