@@ -441,7 +441,8 @@ class Attestable_Switch(Node):
         Post-boot configuration for the switch.
         """
 
-        from_raw_image = self.get_switch_data()["from_raw_image"]
+        # from_raw_image = self.get_switch_data()["from_raw_image"]
+        from_raw_image = True
 
         if self.get_switch_data()["setup_and_configure"]:
             self.execute(f"echo \"{'{}'}\" > {Attestable_Switch.cfg_file}")
@@ -458,12 +459,20 @@ class Attestable_Switch(Node):
                 print(f"Compiling Attestable Switch {self.get_name()}, ", end="")
                 start = time.time()
                 logging.info(f"Attestable Switch {self.get_name()}: cloning repo...")
+                # self.execute(
+                #     'bash -c "git clone https://github.com/awolosewicz/bmv2-remote-attestation.git"',
+                #     quiet=True,
+                # )
+                # self.execute(
+                #     'bash -c "cd ~/bmv2-remote-attestation && git checkout stable"',
+                #     quiet=True,
+                # )
                 self.execute(
-                    'bash -c "git clone https://github.com/awolosewicz/bmv2-remote-attestation.git"',
+                    'bash -c "git clone https://github.com/dsaharia/bmv2-remote-attestation"',
                     quiet=True,
                 )
                 self.execute(
-                    'bash -c "cd ~/bmv2-remote-attestation && git checkout stable"',
+                    'bash -c "cd ~/bmv2-remote-attestation"',
                     quiet=True,
                 )
                 logging.info(
@@ -720,11 +729,17 @@ V1Switch(
             RA_inclusion += " --spade-period " + str(SPADE_period)
         else:
             cfg_update.append(self.prep_switch_config_update("SPADE_period", None))
-
-        commands = [
-            f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
-            f"sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}",
-        ]
+        
+        if with_provP4:
+            commands = [
+                f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
+                f"sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-provP4 --enable-swap {RA_inclusion}",
+            ]
+        else:
+            commands = [
+                f"[ ! -f {Attestable_Switch.crease_path_prefix}nothing.json ] && cd {Attestable_Switch.crease_path_prefix} && p4c --target bmv2 --arch v1model {Attestable_Switch.crease_path_prefix}nothing.p4",
+                f"sudo simple_switch {port_sequence} {program} --log-file ~/switch.log --log-flush -- --enable-swap {RA_inclusion}",
+            ]
 
         stdout = []
         stderr = []
@@ -930,4 +945,119 @@ V1Switch(
             return False
         else:
             print(str(self.get_switch_features()))
+            return True
+    
+    def _read_json_from_remote(self, remote_file_path, as_json: bool = True):
+        """
+        Read a file from the remote node.
+
+        If ``as_json`` is True, interpret the file contents as JSON and return the
+        parsed object. If False, return the file contents as a list of strings
+        (one entry per line).
+        
+        :param remote_file_path: Path to the file on the remote node
+        :type remote_file_path: str
+        :param as_json: Whether to parse the file contents as JSON
+        :type as_json: bool
+        :return: Parsed JSON object or list of strings (lines)
+        """
+        (json_out, json_err) = self.execute(f"cat {remote_file_path}", quiet=True)
+
+        # Normalise into a list of lines
+        if isinstance(json_out, list):
+            lines = [str(line) for line in json_out]
+        else:
+            # Split into lines but keep content as-is
+            lines = str(json_out).splitlines()
+
+        if as_json:
+            json_content = "\n".join(lines)
+            return json.loads(json_content)
+
+        # Return raw lines for non-JSON files
+        return lines
+
+    def instrument_p4_program(self, p4_src_file):
+        """
+        Perform ProvP4 program analysis and instrumentation. Output should be the compiled instrumented P4 source code.
+        """
+        # Import the provp4 specific packages for program analysis and instrumentation
+        # 
+        # try:
+        #     from fabrictestbed_extensions.fablib.provp4_spade.provp4_augmenter import ProvP4Augmenter
+        #     from fabrictestbed_extensions.fablib.provp4_spade.provp4_analysis import ProvP4ProgramAnalyzer
+        #     print("[SUCCESS] Successfully imported ProvP4Augmenter and ProvP4ProgramAnalyzer")
+        # except Exception as e:
+        #     logging.error(f"Failed to import ProvP4Augmenter or ProvP4ProgramAnalyzer: {e}")
+        #     print(f"[ERROR] Failed to import ProvP4Augmenter or ProvP4ProgramAnalyzer: {e}")
+        #     return False
+        self.upload_file(p4_src_file, os.path.basename(p4_src_file), retry=1)
+        program_name = os.path.basename(p4_src_file).split(".")[0]
+        
+        p4c_cmd = f"p4c --target bmv2 --arch v1model ~/{os.path.basename(p4_src_file)}"
+        (out, err) = self.execute(p4c_cmd, quiet=False)
+        if err:
+            print("P4 Compilation failed with stderr: ", err)
+            return False
+        else:
+            print("P4 Compilation successful with stdout: ", out)
+        # Ensure ProvP4 helper scripts are available on the remote host
+        self.copy_provp4_files()
+
+        # Execute provenance analysis and augmentation on the remote host
+        src_basename = os.path.basename(p4_src_file)
+        remote_python_cmd = f"""
+import sys
+import os
+import json
+
+sys.path.insert(0, "/home/ubuntu/provp4")
+
+from provp4_analysis import ProvP4ProgramAnalyzer
+from provp4_augmenter import ProvP4Augmenter
+
+program_name = "{program_name}"
+compiled_json_path = os.path.expanduser("~/{program_name}.json")
+p4_src_path = os.path.expanduser("~/{src_basename}")
+
+with open(compiled_json_path, "r") as f:
+    compiled_json = json.load(f)
+
+with open(p4_src_path, "r") as f:
+    p4_src = f.readlines()
+
+analyzer = ProvP4ProgramAnalyzer(compiled_json, program_name)
+analyzer.analyze_program()
+print(analyzer.register_list)
+
+augmenter = ProvP4Augmenter(p4_src, program_name, analyzer.actions_list, analyzer.augmentation_map)
+augmenter.augment_program()
+"""
+        self.execute(f"python3 - << 'EOF'\n{remote_python_cmd}\nEOF", quiet=False)
+        self._compile_program(f"{program_name}_provp4.p4")
+        # TODO - Compile the augmented program
+        # TODO - Start/load the augmented program
+
+    def copy_provp4_files(self):
+        PROVP4_DIR = "/home/ubuntu/provp4"
+        self.execute(f"mkdir -p {PROVP4_DIR}") # This directory contains the provp4 related files
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/provp4_augmenter.py", f"{PROVP4_DIR}/provp4_augmenter.py")
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/provp4_analysis.py", f"{PROVP4_DIR}/provp4_analysis.py")
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/p4_action.py", f"{PROVP4_DIR}/p4_action.py")
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/p4_register_operation.py", f"{PROVP4_DIR}/p4_register_operation.py")
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/provp4_collector_main_refactored.py", "/home/ubuntu/provp4/provp4_collector.py") # Provenance collector script
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/broker.py", "/home/ubuntu/provp4/broker.py") # Broker script
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/provp4_api.py", "/home/ubuntu/provp4/provp4_api.py") # Provenance API script
+        self.upload_file("fabrictestbed_extensions/fablib/provp4_spade/bmv2_controller.py", "/home/ubuntu/provp4/bmv2_controller.py") # BMv2 controller script
+        self.execute("chmod +x /home/ubuntu/provp4/provp4_collector.py")
+        self.execute("chmod +x /home/ubuntu/provp4/broker.py")
+        self.execute("chmod +x /home/ubuntu/provp4/provp4_api.py")
+        self.execute("chmod +x /home/ubuntu/provp4/bmv2_controller.py")
+
+    def _compile_program(self, p4_src_file):
+        p4c_cmd = f"p4c --target bmv2 --arch v1model ~/{os.path.basename(p4_src_file)}"
+        (out, err) = self.execute(p4c_cmd, quiet=False)
+        if err:
+            return False
+        else:
             return True
